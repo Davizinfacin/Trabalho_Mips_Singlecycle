@@ -2,13 +2,13 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.all; 
 use IEEE.STD_LOGIC_ARITH.all;
 
----------------------- MIPS datapath --------------------
-- Esse módulo é composto pela unidade lógica aritmética -
-- (ula) pelo register file (refile) e lógicas associadas-
--                                                       -
-- Para uma melhor compreensão sobre os sinais de entrada-
-- e saída, consulte a figura 7.59 do livro (ou slides). -
----------------------------------------------------------  
+---------------------- MIPS datapath ---------------------
+-- Esse módulo é composto pela unidade lógica aritmética -
+-- (ula) pelo register file (refile) e lógicas associadas-
+--                                                       -
+-- Para uma melhor compreensão sobre os sinais de entrada-
+-- e saída, consulte a figura 7.59 do livro (ou slides). -
+----------------------------------------------------------  
 
 entity datapath is  
   port(clk, reset:        in  STD_LOGIC;
@@ -60,6 +60,7 @@ architecture struct of datapath is
          s:      in  STD_LOGIC;
          y:      out STD_LOGIC_VECTOR(t-1 downto 0));
   end component;
+  
   signal writereg:           STD_LOGIC_VECTOR(4 downto 0);
   signal pcjump, pcnext, 
          pcnextbr, pcplus4, 
@@ -69,55 +70,48 @@ architecture struct of datapath is
 begin
   
   -------------------- Implemente a lógica para calcular o próximo valor do PC --------------------- 
-  
-  -- Calcule o valor de pc para o caso de uma instrução J e coloque o resultado no sinal pcjump. 
-  -- Use um adder para calcular pc+4 e coloque o resultado no sinal pcplus4. Em seguida, calcule
-  -- pcjump = pcplus4[31 a 28] & instr[25 a 0] & "00" (detalhes na seção 7.3.3 e figura 7.14)
-  
+   
+	--JUMP
+	G1: adder port map(pc, "100", pcplus4); --Cálculo de pc + 4
+	pcjump <= pcplus4(31 downto 28) & (instr(25 downto 0) & "00"); --Cálculo do pc para o caso de Jump
 
-
-  -- Calcule o valor de pc para o caso de uma instruçãoao beq e coloque o resultado no sinal pcbranch. 
-  -- use um extensor de sinal signext, um deslocador e um adder para o calculo. 
-  -- pcbranch = sigext(instr[15 a 0]) << 2 + pcplus4 (detalhes na figura 7.10 do livro) 
-  
+	--BRANCH
+	G2: signext port map(instr(15 downto 0), signimm); --Cálculo do imediato extendido com sinal
+	G3: sl2 port map(signimm, signimmsh); --Cálculo do signimmsh
+	G4: adder port map(pcplus4, signimmsh, pcbranch); --Cálculo do pcbranch
  
+	--Mux para determinar se é função branch
+	G5: mux2 generic map(t => 32) 
+				port map(pcplus4, pcbranch, pcsrc, pcnextbr);
   
-  -- Defina o primeiro mux2 que Seleciona entre pcplus4 e pcbranch, com base em pcsrc.
-  -- saida em pcnextbr (PC´) (ver figura 7.14)
+	--Mux para determinar se é função jump
+	G6: mux2 generic map(t => 32)
+		      port map(pcnextbr, pcjump, jump, pcnext);
   
-
+	--Registrador do PC
+	G7: reg generic map(s => 32)
+			  port map(clk, reset, pcnext, pc);
+	
+  --------------------- Lógica do register file ------------------------------------------- 
+	
+	-- Mux para determinar o endereço de gravação do regFile
+	G8: mux2 generic map(t => 5)
+				port map(instr(20 downto 16), instr(15 downto 11), regdst, writereg);
+	
+	--Mux para determinar se o regFile irá guardar o resultado da ULA, ou um valor da memória de dados
+	G9: mux2 generic map(t => 32)
+				port map(aluout, readdata, memtoreg, result);
   
-  -- Defina o segundo mux2 que Seleciona entre pcnextbr (PC´) e pcjump, com base no sinal jump.
-  -- saida em pcnext (ver figura 7.14)
+	--Register File
+	G10: regfile port map(clk, regwrite, instr(25 downto 21), instr(20 downto 16), writereg, result, srca, writedata);
   
-
-  
-  -- Defina o registrador PC, alimentado por pcnext, e controlado pelo clk e reset.
-  -- A saída desse registrador deve ir para o sinal pc (buffer) que alimentará a entrada de
-  -- endereço da memória de instrução (ver figura 7.59 do livro) 
-
-  
-  
-  --------------------- Lógica do register file -------------------------------------------
-  
-  -- Defina o multiplexador que seleciona o endereço de gravação do register file a fim de
-  -- diferenciar instruções tipo-R de lw (tipo-I)  
-  
-  
-  -- Defina o multiplexador que alimenta a entrada de dados (wd3) do register file. Esse mux2 
-  -- seleciona entre a saida da ula e a saída da memória de dados (ver figura 7.14)
-  
-
-  
-  -- Defina o register file com saídas em srca e writedata (ver figura 7.14)
-  
-
   ---------------------- Logica da ULA ----------------------------------------------------------------------------
   
-  -- Defina o multiplexador que seleciona entre a saida B (writedata) do register file e o imediato extendido (signimm).
-  -- Saida em srcb, que vai para a segunda entrada da ula (ver figura 7.14)
-  
-  
-  -- Defina a ula, com o resultado da operação em aluout e bit zero (ver figura 7.14). 
+	--Mux para determinar a segunda entrada da ULA entre o segundo registrador e o imediato extendido com sinal
+	G11: mux2 generic map(t => 32)
+				 port map(writedata, signimm, alusrc, srcb);
+
+   --Unidade Lógiga e Aritmética (ULA)
+	G12: ula port map(srca, srcb, alucontrol, aluout, zero);
   
 end;
