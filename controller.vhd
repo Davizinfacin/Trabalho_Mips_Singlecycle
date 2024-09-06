@@ -16,7 +16,7 @@ use IEEE.STD_LOGIC_1164.all;
 -                                                         -
 - Para mais detalhes, ver figura 7.59 e seção 7.3.2, 7.3.3-
 - do livro indicado, bem com as figuras 7.12 e 7.14 e     -
-- tabelas 7.1, 7.2 e 7.3.                                  -
+- tabelas 7.1, 7.2 e 7.3.                                 -
 -----------------------------------------------------------
 
 -- É seu trabalho interligar os submódulos da unidade de 
@@ -56,15 +56,28 @@ architecture struct of controller is
 begin
   -- Faça: Instancie o main decoder (maindec) passando op (opcode) e os 9 sinais de saida.
   -- Referência:  figura 7.11 e 7.12 do livro.
+  maindec_inst: maindec port map(
+    op        => op,               -- Conecta o opcode à entrada de 'maindec'
+    memtoreg  => memtoreg,         -- Conecta a saída 'memtoreg' de 'maindec' à saída de 'controller'
+    memwrite  => memwrite,         -- Conecta a saída 'memwrite' de 'maindec' à saída de 'controller'
+    branch    => branch,           -- Conecta a saída 'branch' de 'maindec' ao sinal intermediário 'branch'
+    alusrc    => alusrc,           -- Conecta a saída 'alusrc' de 'maindec' à saída de 'controller'
+    regdst    => regdst,           -- Conecta a saída 'regdst' de 'maindec' à saída de 'controller'
+    regwrite  => regwrite,         -- Conecta a saída 'regwrite' de 'maindec' à saída de 'controller'
+    jump      => jump,              -- Conecta a saída 'jump' de 'maindec' à saída de 'controller'
+    aluop     => aluop             -- Conecta a saída 'aluop' de 'maindec' ao sinal intermediário 'aluop'
+  );
   
-  
-
   --Faça: instancie o alu decoder (aludec) a saida desse modulo deve ser direcionada
-  -- para o sinal de saida alucontrol, que controlara a ula (veja figuras 7.11 e 7.12) 
-  
+  -- para o sinal de saida alucontrol, que controlara a ula (veja figuras 7.11 e 7.12)
+  aludec_inst: aludec port map(
+    funct      => funct,           -- Conecta o campo de função à entrada de 'aludec'
+    aluop      => ulaop,           -- Conecta o sinal 'ulaop' de 'maindec' à entrada de 'aludec'
+    alucontrol => alucontrol       -- Conecta a saída 'alucontrol' de 'aludec' à saída de 'controller'
+  );
 
   -- Faça: Elabore a lógica do pcsrc usando uma porta and.
   -- Esse bit será o seletor do primeiro mux2 na entrada do PC (veja figura 7.14)
-  
+  pcsrc <= op(5) and zero;
 
-end;
+end struct;
