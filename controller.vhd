@@ -78,6 +78,6 @@ begin
 
   -- Faça: Elabore a lógica do pcsrc usando uma porta and.
   -- Esse bit será o seletor do primeiro mux2 na entrada do PC (veja figura 7.14)
-  pcsrc <= op(5) and zero;
+  pcsrc <= branch and zero;
 
 end struct;
